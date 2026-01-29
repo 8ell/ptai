@@ -1,0 +1,46 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import * as z from "zod";
+
+const formSchema = z.object({
+  username: z.string().min(2, "사용자 이름은 2자 이상이어야 합니다."),
+  target_weight: z.coerce
+    .number({ invalid_type_error: "숫자를 입력해주세요." })
+    .positive("목표 체중은 0보다 커야 합니다."),
+  goal_period_start: z.date({ required_error: "목표 시작일을 선택해주세요." }),
+  goal_period_end: z.date({ required_error: "목표 종료일을 선택해주세요." }),
+});
+
+export async function updateGoalAction(values: z.infer<typeof formSchema>) {
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "인증되지 않은 사용자입니다." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      username: values.username,
+      target_weight: values.target_weight,
+      goal_period_start: values.goal_period_start.toISOString(),
+      goal_period_end: values.goal_period_end.toISOString(),
+      // Ensure the id is set for the upsert operation if the profile is new
+    })
+    .eq("id", user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/goals");
+  return { error: null };
+}
