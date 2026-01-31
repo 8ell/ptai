@@ -1,6 +1,7 @@
 -- 1. 사용자 목표 및 신체 정보
 create table if not exists user_goals (
   user_id uuid references auth.users not null primary key,
+  gender text default 'unknown',
   height numeric, -- cm
   current_weight numeric, -- kg (시작 시점)
   target_weight numeric, -- kg
