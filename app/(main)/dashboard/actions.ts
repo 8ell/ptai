@@ -46,3 +46,32 @@ export async function getDashboardData() {
     user
   };
 }
+
+export async function getWorkoutByDate(date: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  // 해당 날짜(00:00 ~ 23:59)의 운동 기록 조회
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const { data: workouts } = await supabase
+    .from('workouts')
+    .select(`
+      *,
+      workout_sets (
+        *
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('status', 'completed')
+    .gte('started_at', startOfDay.toISOString())
+    .lte('started_at', endOfDay.toISOString())
+    .order('started_at', { ascending: false });
+
+  return workouts;
+}

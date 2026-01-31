@@ -184,3 +184,26 @@ export async function finishWorkoutAction(workoutId: string) {
   revalidatePath('/workout');
   redirect('/workout');
 }
+
+// 최근 완료된 운동 조회 (3개)
+export async function getRecentWorkouts() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from('workouts')
+    .select(`
+      *,
+      workout_sets (count)
+    `)
+    .eq('user_id', user.id)
+    .eq('status', 'completed')
+    .order('ended_at', { ascending: false })
+    .limit(3);
+
+  return data || [];
+}
