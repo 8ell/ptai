@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { BottomNav } from '@/components/bottom-nav'
 
 export default async function MainLayout({
   children,
@@ -25,8 +26,8 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <header className="bg-white shadow-sm hidden lg:block">
         <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0">
@@ -62,11 +63,12 @@ export default async function MainLayout({
           </div>
         </nav>
       </header>
-      <main>
-        <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 pb-16 lg:pb-0">
+        <div className="container mx-auto py-4 px-4 sm:px-6 lg:px-8 max-w-md lg:max-w-7xl mx-auto">
           {children}
         </div>
       </main>
+      <BottomNav />
     </div>
   )
 }
