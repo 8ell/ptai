@@ -18,6 +18,17 @@ export default async function MainLayout({
     redirect('/login')
   }
 
+  // Check if user has goals set
+  const { data: hasGoal } = await supabase
+    .from('user_goals')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!hasGoal) {
+    redirect('/onboarding')
+  }
+
   const signOut = async () => {
     'use server'
     const supabase = await createClient()

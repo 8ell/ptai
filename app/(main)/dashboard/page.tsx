@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { checkUserGoalAction } from '../onboarding/actions';
+import { checkUserGoalAction } from '@/app/onboarding/actions';
 import { getDashboardData } from './actions';
 import { DashboardView } from './dashboard-view';
 

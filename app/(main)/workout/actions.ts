@@ -182,7 +182,8 @@ export async function finishWorkoutAction(workoutId: string) {
   }
 
   revalidatePath('/workout');
-  redirect('/workout');
+  revalidatePath('/dashboard');
+  redirect(`/workout/summary/${workoutId}`);
 }
 
 // 최근 완료된 운동 조회 (3개)
@@ -203,7 +204,56 @@ export async function getRecentWorkouts() {
     .eq('user_id', user.id)
     .eq('status', 'completed')
     .order('ended_at', { ascending: false })
-    .limit(3);
-
   return data || [];
+}
+
+export async function getWorkoutSummary(workoutId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // 1. Fetch Workout Data
+  const { data: workout } = await supabase
+    .from('workouts')
+    .select(`*, workout_sets(*)`)
+    .eq('id', workoutId)
+    .single();
+    
+  if (!workout) return null;
+
+  // 2. Check/Create Feedback
+  let { data: feedback } = await supabase
+    .from('workout_feedbacks')
+    .select('*')
+    .eq('workout_id', workoutId)
+    .single();
+
+  if (!feedback) {
+     // Generate Mock AI Feedback
+     const totalSets = workout.workout_sets?.length || 0;
+     const totalVolume = workout.workout_sets?.reduce((acc: number, set: any) => acc + (set.weight * set.reps), 0) || 0;
+     
+     const messages = [
+       "오늘도 해내셨군요! 꾸준함이 가장 큰 무기입니다. 🔥",
+       `총 ${totalSets}세트를 완수하셨습니다. 정말 대단해요! 💪`,
+       "근육통은 성장의 증거입니다. 푹 쉬고 내일 또 만나요! 😴",
+       `오늘의 총 볼륨은 ${totalVolume}kg 입니다. 엄청난 무게를 들어올리셨네요! 🏋️‍♂️`
+     ];
+     const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+
+     const { data: newFeedback } = await supabase
+       .from('workout_feedbacks')
+       .insert({
+         workout_id: workoutId,
+         user_id: user.id,
+         feedback_text: randomMsg,
+         score: 90 + Math.floor(Math.random() * 10) // 90~99 Mock Score
+       })
+       .select()
+       .single();
+       
+     feedback = newFeedback;
+  }
+
+  return { workout, feedback };
 }
