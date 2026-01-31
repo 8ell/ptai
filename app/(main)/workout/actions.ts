@@ -138,6 +138,27 @@ export async function getWorkoutSets(workoutId: string) {
   return data || [];
 }
 
+// 특정 운동의 가장 최근 기록 조회 (이전 세션 포함)
+export async function getLastExerciseLogAction(exerciseName: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from('workout_sets')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('exercise_name', exerciseName)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  return data;
+}
+
 // 운동 종료
 export async function finishWorkoutAction(workoutId: string) {
   const supabase = await createClient();

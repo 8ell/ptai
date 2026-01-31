@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Play, Square, Save, Timer, ChevronLeft, SkipForward } from 'lucide-react';
+import { Loader2, Play, Square, Save, Timer, ChevronLeft, SkipForward, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form';
 
 import { WorkoutSession, WorkoutSet, workoutSetSchema } from '../schema';
-import { addWorkoutSetAction, finishWorkoutAction, updateSetRestTimeAction } from '../actions';
+import { addWorkoutSetAction, finishWorkoutAction, updateSetRestTimeAction, getLastExerciseLogAction } from '../actions';
 import { cn } from '@/lib/utils';
 
 interface ActiveWorkoutViewProps {
@@ -51,6 +51,9 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
 
   // ID of the set currently being rested after
   const [lastSetId, setLastSetId] = useState<string | null>(null);
+  
+  // Historical Data
+  const [lastLog, setLastLog] = useState<WorkoutSet | null>(null);
 
   // Sync with server data
   useEffect(() => {
@@ -109,25 +112,44 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
 
   // Smart Prefill Logic (Triggered when entering Logging phase or changing exercise)
   const exerciseName = form.watch('exercise_name');
+  
   useEffect(() => {
     if (!exerciseName) return;
     
-    // Find last set of this exercise
     const sameExerciseSets = sets.filter((s) => s.exercise_name === exerciseName);
-    if (sameExerciseSets.length > 0) {
-      const lastSet = sameExerciseSets[sameExerciseSets.length - 1];
-      
-      // If we are just starting to log (and user hasn't manually changed set number yet), auto-increment
-      // Simple logic: Always suggest next set number
-      const currentSetNum = form.getValues('set_number');
-      if (currentSetNum === 1 || currentSetNum === lastSet.set_number) {
-         form.setValue('set_number', lastSet.set_number + 1);
-      }
-    } else {
-       // First set of this exercise
-       form.setValue('set_number', 1);
-    }
-  }, [exerciseName, sets, form, phase]);
+    
+    const fetchHistory = async () => {
+        if (sameExerciseSets.length > 0) {
+            // Use current session data
+            const lastSet = sameExerciseSets[sameExerciseSets.length - 1];
+            const currentSetNum = form.getValues('set_number');
+             if (currentSetNum === 1 || currentSetNum === lastSet.set_number) {
+                form.setValue('set_number', lastSet.set_number + 1);
+            }
+            setLastLog(null); // No need to show "historical" badge if we have current data
+        } else {
+            // Fetch historical data
+            const history = await getLastExerciseLogAction(exerciseName);
+            if (history) {
+                // Prefill with historical data
+                const currentWeight = form.getValues('weight');
+                const currentReps = form.getValues('reps');
+                
+                // Only overwrite if currently empty (0)
+                if (currentWeight === 0) form.setValue('weight', Number(history.weight));
+                if (currentReps === 0) form.setValue('reps', Number(history.reps));
+                
+                form.setValue('set_number', 1);
+                setLastLog(history as any);
+            } else {
+                setLastLog(null);
+                form.setValue('set_number', 1);
+            }
+        }
+    };
+    
+    fetchHistory();
+  }, [exerciseName, sets, form, phase]); // Removed 'form' from dependency to avoid loop, added specific deps
 
 
   // C. Submit Log (Logging -> Resting)
@@ -153,6 +175,7 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
           duration: 0,
           rest_time: 0,
         });
+        setLastLog(null); // Clear history hint
 
         // Set Last Set ID for rest time update
         if (result.setId) {
@@ -280,11 +303,17 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
         <CardContent>
           {phase === 'ready' ? (
              <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg text-center">
-                   <p className="text-sm text-muted-foreground mb-2">
+                <div className="p-4 bg-muted rounded-lg text-center flex flex-col items-center justify-center gap-2">
+                   <p className="text-sm text-muted-foreground">
                      {form.getValues('exercise_name') ? `${form.getValues('exercise_name')} ${form.getValues('set_number')}세트` : '새로운 세트'}
                    </p>
-                   <p className="font-medium">준비되면 시작 버튼을 누르세요</p>
+                   {lastLog && (
+                     <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                        <History className="w-3 h-3" />
+                        이전 기록: {lastLog.weight}kg x {lastLog.reps}회
+                     </Badge>
+                   )}
+                   <p className="font-medium mt-1">준비되면 시작 버튼을 누르세요</p>
                 </div>
                 {/* 폼을 미리 보여줘서 운동 종목을 수정할 수 있게 함 */}
                 <div className="grid grid-cols-1 gap-2">
