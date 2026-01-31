@@ -194,7 +194,7 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-           {/* Step 4: Muscle Mass (Optional) */}
+           {/* Step 4: Current Muscle Mass (Optional) */}
            {step === 4 && (
             <motion.div
               key="step4"
@@ -205,7 +205,7 @@ export default function OnboardingPage() {
               className="space-y-6 text-center"
             >
               <div>
-                <h1 className="text-3xl font-bold mb-2">골격근량을 아시나요?</h1>
+                <h1 className="text-3xl font-bold mb-2">현재 골격근량은요?</h1>
                 <p className="text-muted-foreground">인바디 수치가 있다면 입력해주세요. (선택사항)</p>
               </div>
               
@@ -249,10 +249,65 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-           {/* Step 5: Final Review & Submit */}
+          {/* Step 5: Target Muscle Mass (Optional) */}
            {step === 5 && (
             <motion.div
               key="step5"
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              className="space-y-6 text-center"
+            >
+              <div>
+                <h1 className="text-3xl font-bold mb-2">목표 골격근량은요?</h1>
+                <p className="text-muted-foreground">목표가 있다면 입력해주세요. (선택사항)</p>
+              </div>
+              
+              <div className="py-8 relative">
+                {formData.target_muscle_mass === 0 ? (
+                    <div className="h-64 flex items-center justify-center bg-muted/20 rounded-xl">
+                        <span className="text-muted-foreground">목표 없음 / 유지</span>
+                    </div>
+                ) : (
+                    <ScrollPicker
+                    items={generateRange(15, 60, 0.5)}
+                    value={formData.target_muscle_mass}
+                    onValueChange={(val) => updateField('target_muscle_mass', Number(val))}
+                    label="kg"
+                    />
+                )}
+              </div>
+              
+              {/* 토글 버튼 */}
+               <div className="flex justify-center gap-2 mb-4">
+                  <Button 
+                    variant={formData.target_muscle_mass === 0 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => updateField('target_muscle_mass', 0)}
+                  >
+                    목표 없음
+                  </Button>
+                  <Button 
+                    variant={formData.target_muscle_mass !== 0 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => updateField('target_muscle_mass', 25)} // Default value to start picking
+                  >
+                    직접 입력
+                  </Button>
+               </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleBack} className="flex-1 h-14 rounded-full">이전</Button>
+                <Button onClick={handleNext} className="flex-[2] h-14 text-lg rounded-full">다음</Button>
+              </div>
+            </motion.div>
+          )}
+
+           {/* Step 6: Final Review & Submit */}
+           {step === 6 && (
+            <motion.div
+              key="step6"
               variants={slideVariants}
               initial="enter"
               animate="center"
@@ -278,9 +333,15 @@ export default function OnboardingPage() {
                       <span className="font-bold text-lg text-primary">{formData.target_weight} kg</span>
                   </div>
                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">골격근량</span>
+                      <span className="text-muted-foreground">현재 골격근량</span>
                       <span className="font-bold text-lg">
                           {formData.current_muscle_mass ? `${formData.current_muscle_mass} kg` : '-'}
+                      </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">목표 골격근량</span>
+                      <span className="font-bold text-lg">
+                          {formData.target_muscle_mass ? `${formData.target_muscle_mass} kg` : '-'}
                       </span>
                   </div>
               </div>
@@ -294,10 +355,10 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-           {/* Step 6: Analyzing (Loading) */}
-           {step === 6 && (
+           {/* Step 7: Analyzing (Loading) */}
+           {step === 7 && (
             <motion.div
-              key="step6"
+              key="step7"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="space-y-8 text-center flex flex-col items-center justify-center py-10"

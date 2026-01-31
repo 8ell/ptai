@@ -232,22 +232,57 @@ export async function getWorkoutSummary(workoutId: string) {
      // Generate Mock AI Feedback
      const totalSets = workout.workout_sets?.length || 0;
      const totalVolume = workout.workout_sets?.reduce((acc: number, set: any) => acc + (set.weight * set.reps), 0) || 0;
+     const duration = workout.ended_at ? (new Date(workout.ended_at).getTime() - new Date(workout.started_at).getTime()) / 1000 / 60 : 0; // minutes
      
-     const messages = [
-       "오늘도 해내셨군요! 꾸준함이 가장 큰 무기입니다. 🔥",
-       `총 ${totalSets}세트를 완수하셨습니다. 정말 대단해요! 💪`,
-       "근육통은 성장의 증거입니다. 푹 쉬고 내일 또 만나요! 😴",
-       `오늘의 총 볼륨은 ${totalVolume}kg 입니다. 엄청난 무게를 들어올리셨네요! 🏋️‍♂️`
-     ];
-     const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+     // Extract main exercises (most sets)
+     const exerciseCounts: {[key: string]: number} = {};
+     workout.workout_sets?.forEach((s: any) => {
+         exerciseCounts[s.exercise_name] = (exerciseCounts[s.exercise_name] || 0) + 1;
+     });
+     const mainExercise = Object.entries(exerciseCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+     let feedbackText = "";
+     let score = 85;
+
+     if (totalSets === 0) {
+         feedbackText = "운동 기록이 충분하지 않네요. 다음번엔 조금 더 힘내볼까요? 😅";
+         score = 50;
+     } else {
+         const parts = [];
+         
+         // Intro
+         if (duration > 60) parts.push("정말 긴 시간 동안 고생하셨습니다! 끈기가 대단해요. 🔥");
+         else if (duration < 20) parts.push("짧고 굵게! 효율적인 운동이었습니다. ⚡️");
+         else parts.push("오늘도 목표를 위해 땀 흘린 당신, 정말 멋집니다! 👍");
+
+         // Volume & Intensity
+         if (totalVolume > 5000) {
+             parts.push(`총 볼륨 ${totalVolume.toLocaleString()}kg! 엄청난 강도였습니다. 근성장이 기대되네요.`);
+             score += 10;
+         } else {
+             parts.push(`총 ${totalSets}세트를 깔끔하게 완수하셨군요.`);
+             score += 5;
+         }
+
+         // Specific Exercise
+         if (mainExercise) {
+             parts.push(`특히 '${mainExercise}'에 집중한 모습이 인상적입니다.`);
+         }
+
+         // Outro
+         parts.push("푹 쉬고 맛있는 단백질 섭취 잊지 마세요! 🍗");
+         
+         feedbackText = parts.join(" ");
+         score = Math.min(100, score + Math.floor(Math.random() * 5));
+     }
 
      const { data: newFeedback } = await supabase
        .from('workout_feedbacks')
        .insert({
          workout_id: workoutId,
          user_id: user.id,
-         feedback_text: randomMsg,
-         score: 90 + Math.floor(Math.random() * 10) // 90~99 Mock Score
+         feedback_text: feedbackText,
+         score: score
        })
        .select()
        .single();

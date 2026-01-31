@@ -107,7 +107,7 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
   const handleFinishSet = () => {
     if (setTimerRef.current) clearInterval(setTimerRef.current);
     setPhase('logging');
-    form.setValue('duration', setSetDuration ? setDuration : 0);
+    form.setValue('duration', setDuration);
   };
 
   // Smart Prefill Logic (Triggered when entering Logging phase or changing exercise)

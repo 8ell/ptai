@@ -39,10 +39,20 @@ export async function getDashboardData() {
     .gte('started_at', start)
     .lte('started_at', end);
 
+  // 4. 최근 완료된 운동 (최대 5개, 날짜 무관)
+  const { data: recentWorkouts } = await supabase
+    .from('workouts')
+    .select('id, started_at, status, title, ended_at')
+    .eq('user_id', user.id)
+    .eq('status', 'completed')
+    .order('ended_at', { ascending: false })
+    .limit(5);
+
   return {
     goal,
     plan: plan?.plan_data, // JSON 데이터
     history: history || [],
+    recentWorkouts: recentWorkouts || [],
     user
   };
 }

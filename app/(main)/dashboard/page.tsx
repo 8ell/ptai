@@ -17,14 +17,15 @@ export default async function DashboardPage() {
   const dashboardData = await getDashboardData();
   if (!dashboardData) return null;
 
-  const { goal, plan, history } = dashboardData;
+  const { goal, plan, history, recentWorkouts } = dashboardData;
 
   return (
     <DashboardView 
       user={user} 
       goal={goal} 
       plan={plan} 
-      history={history} 
+      history={history}
+      recentWorkouts={recentWorkouts}
     />
   );
 }

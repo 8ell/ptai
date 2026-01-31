@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Dumbbell, Quote, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Dumbbell, Quote, Loader2, Clock, ChevronRight } from 'lucide-react';
 
 import {
   Card,
@@ -31,9 +31,10 @@ interface DashboardViewProps {
   goal: any;
   plan: any;
   history: any[];
+  recentWorkouts: any[];
 }
 
-export function DashboardView({ user, goal, plan, history }: DashboardViewProps) {
+export function DashboardView({ user, goal, plan, history, recentWorkouts }: DashboardViewProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dayWorkouts, setDayWorkouts] = useState<any[]>([]);
@@ -63,17 +64,14 @@ export function DashboardView({ user, goal, plan, history }: DashboardViewProps)
     setSelectedDate(date);
 
     // 해당 날짜에 완료된 운동이 있는지 확인 (history prop 활용)
-    const hasWorkout = history.some(h => 
-      new Date(h.started_at).toDateString() === date.toDateString() && h.status === 'completed'
-    );
-
-    if (hasWorkout) {
-      startTransition(async () => {
-        const workouts = await getWorkoutByDate(date.toISOString());
-        setDayWorkouts(workouts || []);
-        setIsDialogOpen(true);
-      });
-    }
+    // 달력에는 이번달 데이터만 있지만, 클릭 시 전체 조회를 위해 active fetch를 수행하므로
+    // history prop 체크는 UI 피드백용으로만 쓰고 실제 데이터는 서버 액션으로 가져옴.
+    
+    startTransition(async () => {
+      const workouts = await getWorkoutByDate(date.toISOString());
+      setDayWorkouts(workouts || []);
+      setIsDialogOpen(true);
+    });
   };
 
   return (
@@ -150,8 +148,8 @@ export function DashboardView({ user, goal, plan, history }: DashboardViewProps)
          </Card>
       </div>
 
-      {/* 2. Calendar Section */}
-      <div className="grid gap-4 md:grid-cols-1">
+      {/* 2. Calendar & Recent History Section */}
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
            <CardHeader>
              <CardTitle className="flex items-center gap-2 text-lg">
@@ -192,6 +190,47 @@ export function DashboardView({ user, goal, plan, history }: DashboardViewProps)
                  계획됨
               </div>
            </CardFooter>
+        </Card>
+
+        {/* Recent History Section */}
+        <Card>
+           <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                 <Clock className="w-5 h-5" />
+                 최근 운동 기록
+              </CardTitle>
+              <CardDescription>
+                 최근 완료한 운동 세션입니다.
+              </CardDescription>
+           </CardHeader>
+           <CardContent>
+              {recentWorkouts.length > 0 ? (
+                 <div className="space-y-4">
+                    {recentWorkouts.map((workout) => (
+                       <div 
+                         key={workout.id} 
+                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                         onClick={() => {
+                            handleDateSelect(new Date(workout.started_at));
+                         }}
+                       >
+                          <div className="space-y-1">
+                             <div className="font-medium text-sm">{workout.title || '운동 세션'}</div>
+                             <div className="text-xs text-muted-foreground">
+                                {format(new Date(workout.started_at), 'PPP (eee)', { locale: ko })}
+                             </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                       </div>
+                    ))}
+                 </div>
+              ) : (
+                 <div className="text-center py-8 text-muted-foreground">
+                    아직 완료된 운동이 없습니다.<br/>
+                    첫 운동을 시작해보세요!
+                 </div>
+              )}
+           </CardContent>
         </Card>
       </div>
 
