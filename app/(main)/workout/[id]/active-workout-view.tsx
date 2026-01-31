@@ -36,13 +36,18 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
   const [sets, setSets] = useState<WorkoutSet[]>(initialSets);
   const [elapsed, setElapsed] = useState(0);
   const [isPending, startTransition] = useTransition();
+  
+  // 휴식 타이머 상태
+  const [isResting, setIsResting] = useState(false);
+  const [restStartTime, setRestStartTime] = useState<number | null>(null);
+  const [restDuration, setRestDuration] = useState(0);
 
   // 서버 데이터와 로컬 상태 동기화
   useEffect(() => {
     setSets(initialSets);
   }, [initialSets]);
 
-  // 타이머 로직
+  // 전체 운동 타이머
   useEffect(() => {
     const startTime = new Date(workout.started_at).getTime();
     const interval = setInterval(() => {
@@ -51,6 +56,18 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
     }, 1000);
     return () => clearInterval(interval);
   }, [workout.started_at]);
+
+  // 휴식 타이머
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isResting && restStartTime) {
+      interval = setInterval(() => {
+        const now = Date.now();
+        setRestDuration(Math.floor((now - restStartTime) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isResting, restStartTime]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -82,20 +99,13 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
     if (sameExerciseSets.length > 0) {
       const lastSet = sameExerciseSets[sameExerciseSets.length - 1];
       
-      // 다음 세트 번호 자동 설정
+      // 다음 세트 번호 자동 설정 (이미 입력된 값이 없을 때만)
+      // 여기서는 심플하게 항상 계산
       form.setValue('set_number', lastSet.set_number + 1);
-      
-      // 무게/횟수는 이전 세트 따라가기 (사용자가 아직 수정하지 않았다면)
-      // 여기서는 편의상 항상 덮어쓰거나, 특정 조건일 때만 덮어쓰는데
-      // UX상 입력 직후에는 이전 값을 보여주는게 수정하기 편함
-      // 단, 사용자가 이미 값을 바꿨다면 덮어쓰지 않도록 주의해야 하지만,
-      // 간단하게 구현하기 위해 타이핑이 끝난(blur) 시점이나 엔터 칠 때가 아니라
-      // 실시간으로 반영하면 입력이 튈 수 있음.
-      // 따라서 여기서는 'exerciseName'이 바뀌었을 때만 한 번 실행하는 것이 좋음.
     } else {
       form.setValue('set_number', 1);
     }
-  }, [exerciseName, sets, form]); // exerciseName이 바뀔 때 트리거
+  }, [exerciseName, sets, form]); 
 
   // 세트 추가 핸들러
   const onSubmit = (values: z.infer<typeof workoutSetSchema>) => {
@@ -105,9 +115,6 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
         toast.error(result.error);
       } else {
         toast.success('세트가 기록되었습니다.');
-        // 낙관적 업데이트 또는 서버 리프레시
-        // 여기서는 간단히 서버 리프레시 후 폼 리셋
-        // 하지만 "다음 세트"를 위해 폼 값을 유지하는 것이 요구사항.
         
         // 1. 현재 값 캡처 (다음 세트 프리필용)
         const currentWeight = values.weight;
@@ -115,7 +122,7 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
         const currentName = values.exercise_name;
         const nextSetNum = values.set_number + 1;
 
-        // 2. 폼 재설정 (운동 종목, 무게, 횟수는 유지, 세트만 증가)
+        // 2. 폼 재설정 
         form.reset({
           exercise_name: currentName,
           weight: currentWeight,
@@ -124,11 +131,20 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
           set_number: nextSetNum,
         });
 
-        // 3. 목록 새로고침을 위해 라우터 리프레시 (비동기라 약간 딜레이 있을 수 있음)
-        // 실제로는 setSets로 로컬 상태도 업데이트 해주는게 즉각적임.
+        // 3. 목록 새로고침
         router.refresh(); 
+
+        // 4. 휴식 모드 진입
+        setRestStartTime(Date.now());
+        setRestDuration(0);
+        setIsResting(true);
       }
     });
+  };
+
+  const skipRest = () => {
+    setIsResting(false);
+    setRestStartTime(null);
   };
 
   const handleFinish = async () => {
@@ -139,13 +155,43 @@ export function ActiveWorkoutView({ workout, initialSets }: ActiveWorkoutViewPro
     });
   };
 
-  // UI 렌더링을 위해 세트 역순 정렬 (최신이 위로? 아니면 종목별 그룹핑? 일단 단순 리스트)
-  // 요구사항: "운동 종목별로" -> Group by Exercise가 좋음.
+  // UI 렌더링을 위해 세트 역순 정렬
   const groupedSets = sets.reduce((acc, set) => {
     if (!acc[set.exercise_name]) acc[set.exercise_name] = [];
     acc[set.exercise_name].push(set);
     return acc;
   }, {} as Record<string, WorkoutSet[]>);
+
+  // 휴식 타이머 오버레이
+  if (isResting) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="text-center space-y-8 w-full max-w-md">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold text-muted-foreground">휴식 중</h2>
+            <div className="text-8xl font-black font-mono tracking-tighter text-primary">
+              {formatTime(restDuration)}
+            </div>
+            <p className="text-sm text-muted-foreground">다음 세트를 위해 에너지를 충전하세요.</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 pt-8">
+             {/* 추후 구현: 휴식 시간 +/- 버튼 */}
+             {/* <Button variant="outline" size="lg" onClick={() => setRestStartTime(curr => curr ? curr + 30000 : null)}>-30초</Button> */}
+             {/* <Button variant="outline" size="lg" onClick={() => setRestStartTime(curr => curr ? curr - 30000 : null)}>+30초</Button> */}
+          </div>
+
+          <Button 
+            size="lg" 
+            className="w-full h-16 text-xl font-bold rounded-2xl shadow-lg" 
+            onClick={skipRest}
+          >
+            다음 세트 시작하기
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-24 space-y-6">
