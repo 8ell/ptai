@@ -1,99 +1,72 @@
-import { createClient } from "@/lib/supabase/server";
-
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { AddWorkoutLogDialog } from "./add-workout-form";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
-
-export const revalidate = 0;
+import { Suspense } from 'react';
+import { getActiveWorkout, startWorkoutAction } from './actions';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dumbbell, Play, ChevronRight, History } from 'lucide-react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 export default async function WorkoutPage() {
-  const supabase = await createClient();
+  const activeWorkout = await getActiveWorkout();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return <div>로그인이 필요합니다.</div>;
-  }
-
-  const { data: workoutLogs, error } = await supabase
-    .from("workout_logs")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("workout_date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Error fetching workout logs:", error);
-    // You could show a proper error component here
-    return <div>운동 기록을 불러오는 중 오류가 발생했습니다.</div>;
+  async function startWorkout() {
+    'use server';
+    const { id } = await startWorkoutAction();
+    redirect(`/workout/${id}`);
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="space-y-1.5">
-          <CardTitle>운동 기록</CardTitle>
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold tracking-tight">운동 기록</h1>
+        <p className="text-muted-foreground">오늘의 운동을 기록하고 관리하세요.</p>
+      </div>
+
+      {/* Active Workout Card */}
+      <Card className="border-2 border-primary/20 shadow-lg">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Dumbbell className="h-5 w-5 text-primary" />
+            {activeWorkout ? '진행 중인 운동' : '오늘의 운동'}
+          </CardTitle>
           <CardDescription>
-            당신의 모든 노력을 기록하고 관리하세요.
+            {activeWorkout 
+              ? `${new Date(activeWorkout.started_at).toLocaleTimeString()}에 시작됨` 
+              : '새로운 운동 세션을 시작하세요.'}
           </CardDescription>
-        </div>
-        <AddWorkoutLogDialog />
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[120px]">날짜</TableHead>
-              <TableHead>운동</TableHead>
-              <TableHead className="text-right">무게 (kg)</TableHead>
-              <TableHead className="text-right">횟수</TableHead>
-              <TableHead className="text-right">세트</TableHead>
-              <TableHead className="text-right">RPE</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {workoutLogs && workoutLogs.length > 0 ? (
-              workoutLogs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="font-medium">
-                    {format(new Date(log.workout_date), "yy/MM/dd (eee)", { locale: ko })}
-                  </TableCell>
-                  <TableCell>{log.exercise_name}</TableCell>
-                  <TableCell className="text-right">{log.weight ?? "-"}</TableCell>
-                  <TableCell className="text-right">{log.reps ?? "-"}</TableCell>
-                  <TableCell className="text-right">{log.sets ?? "-"}</TableCell>
-                  <TableCell className="text-right">{log.rpe ?? "-"}</TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  아직 운동 기록이 없습니다. 첫 기록을 추가해보세요!
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-           <TableCaption>최근 운동 기록 목록입니다.</TableCaption>
-        </Table>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          {activeWorkout ? (
+            <Link href={`/workout/${activeWorkout.id}`}>
+              <Button size="lg" className="w-full text-lg h-14" variant="default">
+                <Play className="mr-2 h-5 w-5 fill-current" />
+                운동 계속하기
+              </Button>
+            </Link>
+          ) : (
+            <form action={startWorkout}>
+              <Button size="lg" className="w-full text-lg h-14" type="submit">
+                <Play className="mr-2 h-5 w-5 fill-current" />
+                운동 시작하기
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Placeholder for History or Stats */}
+      <div className="pt-4">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <History className="h-4 w-4" />
+          최근 기록
+        </h2>
+        <Card className="bg-muted/50 border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <p>아직 완료된 운동 기록이 없습니다.</p>
+            <p className="text-sm">운동을 완료하면 여기에 표시됩니다.</p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
