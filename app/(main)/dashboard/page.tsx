@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { checkUserGoalAction } from '../onboarding/actions'
 
 // Assuming shadcn/ui components are available
 import {
@@ -19,6 +20,12 @@ export default async function DashboardPage() {
 
   if (!user) {
     redirect('/login')
+  }
+
+  // 목표 설정 여부 확인
+  const hasGoal = await checkUserGoalAction();
+  if (!hasGoal) {
+    redirect('/onboarding');
   }
 
   return (
