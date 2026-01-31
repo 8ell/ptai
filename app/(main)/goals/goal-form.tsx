@@ -33,10 +33,10 @@ import { updateGoalAction } from "./actions";
 const formSchema = z.object({
   username: z.string().min(2, "사용자 이름은 2자 이상이어야 합니다."),
   target_weight: z.coerce
-    .number({ invalid_type_error: "숫자를 입력해주세요." })
+    .number()
     .positive("목표 체중은 0보다 커야 합니다."),
-  goal_period_start: z.date({ required_error: "목표 시작일을 선택해주세요." }),
-  goal_period_end: z.date({ required_error: "목표 종료일을 선택해주세요." }),
+  goal_period_start: z.date(),
+  goal_period_end: z.date(),
 });
 
 export type Profile = {
@@ -51,7 +51,7 @@ export function GoalForm({ profile }: { profile: Profile }) {
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       username: profile.username ?? "",
       target_weight: profile.target_weight ?? 0,

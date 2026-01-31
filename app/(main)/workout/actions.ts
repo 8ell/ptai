@@ -11,7 +11,7 @@ export const workoutLogSchema = z.object({
   reps: z.coerce.number().min(0).optional(),
   sets: z.coerce.number().min(0).optional(),
   rpe: z.coerce.number().min(1).max(10).optional(),
-  workout_date: z.date({ required_error: "운동 날짜를 선택해주세요." }),
+  workout_date: z.date(),
 });
 
 export async function addWorkoutLogAction(
