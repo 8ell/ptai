@@ -60,14 +60,17 @@ export function ScrollPicker({
   
   return (
     <div className={cn("relative flex items-center justify-center h-64 overflow-hidden bg-background", className)}>
+      {/* Fade Mask */}
+      <div className="absolute inset-0 pointer-events-none z-20 bg-gradient-to-b from-background via-transparent to-background" />
+
       {/* 선택 하이라이트 바 (중앙 고정) */}
       <div 
         className="absolute w-full border-y border-primary/20 bg-muted/20 pointer-events-none z-10"
         style={{ height: itemHeight, top: '50%', marginTop: -itemHeight / 2 }}
       />
       
-      <div className="h-full w-full max-w-[200px]" ref={emblaRef}>
-        <div className="flex flex-col py-[calc(50%-24px)]"> {/* itemHeight/2 만큼 보정 */}
+      <div className="h-full w-full max-w-[200px] overflow-hidden" ref={emblaRef}>
+        <div className="flex flex-col">
           {items.map((item, index) => (
             <div
               key={index}
