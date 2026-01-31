@@ -55,7 +55,7 @@ export async function startWorkoutAction() {
 
   if (error) {
     console.error('Error starting workout:', error);
-    throw new Error('Failed to start workout');
+    throw new Error(`Failed to start workout: ${error.message} (Code: ${error.code})`);
   }
 
   revalidatePath('/workout');
