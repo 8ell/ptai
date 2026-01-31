@@ -22,6 +22,8 @@ create table if not exists workout_sets (
   weight numeric default 0,
   reps numeric default 0,
   rpe numeric, -- 운동 강도 (선택)
+  duration int default 0, -- 세트 수행 시간 (초)
+  rest_time int default 0, -- 세트 후 휴식 시간 (초)
   created_at timestamptz default now()
 );
 

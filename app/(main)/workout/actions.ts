@@ -36,7 +36,6 @@ export async function startWorkoutAction() {
 
   if (!user) throw new Error('Unauthorized');
 
-  // 이미 진행 중인 운동이 있는지 확인
   const active = await getActiveWorkout();
   if (active) {
     return { id: active.id };
@@ -63,7 +62,7 @@ export async function startWorkoutAction() {
   return { id: data.id };
 }
 
-// 세트 기록 추가
+// 세트 기록 추가 (수행 시간 포함)
 export async function addWorkoutSetAction(
   workoutId: string,
   values: z.infer<typeof workoutSetSchema>
@@ -75,13 +74,12 @@ export async function addWorkoutSetAction(
 
   if (!user) return { error: 'Unauthorized' };
 
-  // 유효성 검사
   const validated = workoutSetSchema.safeParse(values);
   if (!validated.success) {
     return { error: 'Invalid data' };
   }
 
-  const { error } = await supabase.from('workout_sets').insert({
+  const { data, error } = await supabase.from('workout_sets').insert({
     workout_id: workoutId,
     user_id: user.id,
     exercise_name: validated.data.exercise_name,
@@ -89,7 +87,9 @@ export async function addWorkoutSetAction(
     weight: validated.data.weight,
     reps: validated.data.reps,
     rpe: validated.data.rpe,
-  });
+    duration: validated.data.duration ?? 0,
+    rest_time: 0, // 초기에는 0, 휴식 후 업데이트
+  }).select().single();
 
   if (error) {
     console.error('Error adding set:', error);
@@ -97,6 +97,31 @@ export async function addWorkoutSetAction(
   }
 
   revalidatePath(`/workout/${workoutId}`);
+  // 방금 생성된 세트의 ID를 반환하여 휴식 시간 업데이트에 사용
+  return { success: true, setId: data.id };
+}
+
+// 휴식 시간 업데이트 (세트 후 휴식)
+export async function updateSetRestTimeAction(setId: string, restTime: number) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: 'Unauthorized' };
+
+  const { error } = await supabase
+    .from('workout_sets')
+    .update({ rest_time: restTime })
+    .eq('id', setId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Error updating rest time:', error);
+    return { error: error.message };
+  }
+  
+  revalidatePath('/workout'); // 전체 갱신이 필요할 수도 있음
   return { success: true };
 }
 

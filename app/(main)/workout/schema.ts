@@ -16,6 +16,8 @@ export const workoutSetSchema = z.object({
   reps: z.coerce.number().min(1, { message: '횟수는 1회 이상이어야 합니다.' }),
   rpe: z.coerce.number().min(0).max(10).optional(),
   set_number: z.coerce.number().min(1),
+  duration: z.coerce.number().optional(), // 세트 수행 시간 (초)
+  rest_time: z.coerce.number().optional(), // 직전 휴식 시간 (초) -> 로직상 필요하다면
 });
 
 export type WorkoutSession = z.infer<typeof workoutSessionSchema>;
@@ -23,4 +25,6 @@ export type WorkoutSet = z.infer<typeof workoutSetSchema> & {
   id: string;
   workout_id: string;
   created_at: string;
+  duration?: number;
+  rest_time?: number;
 };
