@@ -7,7 +7,7 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const {
     data: { user },
@@ -19,7 +19,7 @@ export default async function MainLayout({
 
   const signOut = async () => {
     'use server'
-    const supabase = createClient()
+    const supabase = await createClient()
     await supabase.auth.signOut()
     redirect('/login')
   }

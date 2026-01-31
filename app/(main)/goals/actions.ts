@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import * as z from "zod";
 
 const formSchema = z.object({
@@ -15,8 +14,12 @@ const formSchema = z.object({
 });
 
 export async function updateGoalAction(values: z.infer<typeof formSchema>) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const validated = formSchema.safeParse(values);
+  if (!validated.success) {
+    return { error: "입력값이 올바르지 않습니다." };
+  }
+  
+  const supabase = await createClient();
 
   const {
     data: { user },
@@ -29,10 +32,10 @@ export async function updateGoalAction(values: z.infer<typeof formSchema>) {
   const { error } = await supabase
     .from("profiles")
     .update({
-      username: values.username,
-      target_weight: values.target_weight,
-      goal_period_start: values.goal_period_start.toISOString(),
-      goal_period_end: values.goal_period_end.toISOString(),
+      username: validated.data.username,
+      target_weight: validated.data.target_weight,
+      goal_period_start: validated.data.goal_period_start.toISOString(),
+      goal_period_end: validated.data.goal_period_end.toISOString(),
       // Ensure the id is set for the upsert operation if the profile is new
     })
     .eq("id", user.id);

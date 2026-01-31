@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 
 import {
   Card,
@@ -13,8 +12,7 @@ import { GoalForm } from "./goal-form";
 
 // Server Component: The main page that fetches data
 export default async function GoalsPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient();
 
   const {
     data: { user },

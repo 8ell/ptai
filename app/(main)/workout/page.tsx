@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 
 import {
   Table,
@@ -24,8 +23,7 @@ import { ko } from "date-fns/locale";
 export const revalidate = 0;
 
 export default async function WorkoutPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient();
 
   const {
     data: { user },

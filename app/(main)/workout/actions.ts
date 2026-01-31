@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import * as z from "zod";
 
 // Schema for workout log form validation
@@ -18,8 +17,7 @@ export const workoutLogSchema = z.object({
 export async function addWorkoutLogAction(
   values: z.infer<typeof workoutLogSchema>
 ) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient();
 
   const {
     data: { user },
