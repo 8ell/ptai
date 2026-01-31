@@ -69,7 +69,7 @@ export function ScrollPicker({
 		scrollToIndex(index, 'smooth');
 		window.setTimeout(() => {
 			isProgrammaticScrollRef.current = false;
-		}, 100);
+		}, 150);
 	}, [items, itemHeight, onValueChange, scrollToIndex, value]);
 
 	const onScroll = React.useCallback(() => {
@@ -80,7 +80,7 @@ export function ScrollPicker({
 		}
 		scrollEndTimerRef.current = window.setTimeout(() => {
 			commitNearestValue();
-		}, 80);
+		}, 120);
 	}, [commitNearestValue]);
 
 	React.useEffect(() => {
