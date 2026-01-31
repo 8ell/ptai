@@ -43,7 +43,7 @@ export default function OnboardingPage() {
   };
 
   const handleSubmit = () => {
-    setStep(6); // Loading/Analyzing step
+    setStep(7); // Loading/Analyzing step
     
     startTransition(async () => {
       // 2초 딜레이로 AI가 분석하는 척 연출
@@ -57,7 +57,7 @@ export default function OnboardingPage() {
 
       if (result.error) {
         toast.error(result.error);
-        setStep(5); // Back to last input
+        setStep(6); // Back to review step
       } else {
         toast.success('맞춤형 플랜이 생성되었습니다!');
         router.push('/dashboard');
